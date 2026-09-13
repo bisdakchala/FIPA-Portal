@@ -24,6 +24,7 @@ const db = new sqlite3.Database(dbFile, (err) => {
 });
 
 const server = http.createServer((req, res) => {
+    // Handle POST request to add a new user
     if (req.method === 'POST' && req.url === '/api/users') {
         let body = '';
         req.on('data', chunk => { body += chunk.toString(); });
@@ -43,6 +44,28 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    // Handle PUT request to update an existing user
+    if (req.method === 'PUT' && req.url.startsWith('/api/users/')) {
+        const id = req.url.split('/')[3];
+        let body = '';
+        req.on('data', chunk => { body += chunk.toString(); });
+        req.on('end', () => {
+            const { username, role } = JSON.parse(body);
+            const query = `UPDATE users SET username = ?, role = ? WHERE id = ?`;
+            db.run(query, [username, role, id], function(err) {
+                if (err) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: err.message }));
+                } else {
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: true, changes: this.changes }));
+                }
+            });
+        });
+        return;
+    }
+
+    // Handle DELETE request to remove a user
     if (req.method === 'DELETE' && req.url.startsWith('/api/users/')) {
         const id = req.url.split('/')[3];
         const query = `DELETE FROM users WHERE id = ?`;
@@ -58,6 +81,7 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    // Handle GET request for user data
     if (req.url === '/api/data') {
         db.all("SELECT * FROM users", [], (err, rows) => {
             if (err) {
@@ -69,6 +93,7 @@ const server = http.createServer((req, res) => {
             res.end(JSON.stringify(rows));
         });
     } else {
+        // Serve frontend HTML page
         let filePath = path.join(__dirname, 'index.html');
         fs.readFile(filePath, (err, content) => {
             if (err) {

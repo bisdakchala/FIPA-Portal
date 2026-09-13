@@ -14,6 +14,8 @@
         input, select { padding: 8px; margin-right: 10px; border: 1px solid #ccc; border-radius: 4px; }
         button { padding: 8px 15px; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; }
         button:hover { background: #0056b3; }
+        .edit-btn { background: #ffc107; color: #333; padding: 5px 10px; font-size: 12px; margin-right: 5px; }
+        .edit-btn:hover { background: #e0a800; }
         .delete-btn { background: #dc3545; padding: 5px 10px; font-size: 12px; }
         .delete-btn:hover { background: #c82333; }
     </style>
@@ -70,7 +72,10 @@
                             <td>${user.username}</td>
                             <td>${user.role}</td>
                             <td>${user.created_at}</td>
-                            <td><button class="delete-btn" onclick="deleteUser(${user.id})">Delete</button></td>
+                            <td>
+                                <button class="edit-btn" onclick="editUser(${user.id}, '${user.username}', '${user.role}')">Edit</button>
+                                <button class="delete-btn" onclick="deleteUser(${user.id})">Delete</button>
+                            </td>
                         `;
                         tbody.appendChild(tr);
                     });
@@ -100,6 +105,28 @@
             })
             .catch(err => console.error('Error:', err));
         });
+
+        function editUser(id, currentUsername, currentRole) {
+            const newUsername = prompt('Edit username:', currentUsername);
+            if (newUsername === null) return;
+            const newRole = prompt('Edit role (user / administrator):', currentRole);
+            if (newRole === null) return;
+
+            fetch(`/api/users/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: newUsername, role: newRole })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    loadUsers();
+                } else {
+                    alert('Error updating user: ' + data.error);
+                }
+            })
+            .catch(err => console.error('Error:', err));
+        }
 
         function deleteUser(id) {
             if (confirm('Are you sure you want to delete this user?')) {
