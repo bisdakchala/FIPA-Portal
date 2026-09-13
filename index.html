@@ -3,91 +3,661 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FIPA Portal</title>
+    <title>FIPA Portal - School Billing & Management</title>
+    <!-- QR Code Library CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f7f6; }
-        h1, h3 { color: #333; }
-        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        body { font-family: Arial, sans-serif; margin: 0; background-color: #f4f7f6; color: #333; }
+        .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 350px; margin: auto; }
+        h1, h3 { color: #333; margin-top: 0; text-align: center; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { padding: 10px 15px; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; font-size: 14px; }
+        button:hover { background: #0056b3; }
+        .error { color: #dc3545; font-size: 14px; text-align: center; margin-top: 10px; }
+        
+        #loginWrapper { display: flex; justify-content: center; align-items: center; height: 100vh; }
+        #dashboardContainer { display: none; max-width: 1200px; margin: 20px auto; padding: 20px; box-sizing: border-box; }
+        
+        .header-bar { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .logout-btn { background: #dc3545; }
+        .logout-btn:hover { background: #c82333; }
+        
+        .nav-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+        .nav-tab { padding: 10px 20px; background: #e2e8f0; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .nav-tab.active { background: #007bff; color: white; }
+
+        .tab-content { display: none; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .tab-content.active { display: block; }
+
         table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
         th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
         th { background-color: #007bff; color: white; }
-        input, select { padding: 8px; margin-right: 10px; border: 1px solid #ccc; border-radius: 4px; }
-        button { padding: 8px 15px; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; }
-        button:hover { background: #0056b3; }
-        .edit-btn { background: #ffc107; color: #333; padding: 5px 10px; font-size: 12px; margin-right: 5px; }
-        .edit-btn:hover { background: #e0a800; }
+        .badge-paid { background: #28a745; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+        .badge-unpaid { background: #dc3545; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
         .delete-btn { background: #dc3545; padding: 5px 10px; font-size: 12px; }
-        .delete-btn:hover { background: #c82333; }
+
+        /* Official Receipt Styles (Preview & Print Matched) */
+        #receiptModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            overflow-y: auto;
+            padding: 40px 0;
+            box-sizing: border-box;
+            z-index: 1000;
+        }
+        .receipt-card {
+            background: white;
+            border: 2px solid #222;
+            border-radius: 6px;
+            padding: 25px;
+            max-width: 480px;
+            margin: 0 auto;
+            font-family: 'Courier New', Courier, monospace;
+            color: #111;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        .receipt-header {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .receipt-header h3 {
+            margin: 0 0 4px 0;
+            font-size: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .receipt-header p {
+            margin: 0;
+            font-size: 12px;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .receipt-divider {
+            border: none;
+            border-top: 1px dashed #444;
+            margin: 12px 0;
+        }
+        .receipt-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            font-size: 13px;
+        }
+        .receipt-row span:first-child {
+            font-weight: bold;
+            color: #333;
+        }
+        .receipt-total-box {
+            background: #f8fafc;
+            border: 1px dashed #cbd5e1;
+            padding: 10px;
+            margin-top: 15px;
+            margin-bottom: 15px;
+        }
+        .receipt-qrcode-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 15px 0;
+        }
+        #qrcode {
+            background: white;
+            padding: 5px;
+            border: 1px solid #ccc;
+        }
+        #qrcode img {
+            display: block;
+            margin: 0 auto;
+        }
+        .receipt-footer {
+            text-align: center;
+            font-size: 11px;
+            color: #666;
+            margin-top: 15px;
+        }
+
+        @media print {
+            body * { visibility: hidden; }
+            #receiptModal, #receiptModal * { visibility: visible; }
+            #receiptModal { 
+                position: absolute; 
+                left: 0; 
+                top: 0; 
+                width: 100%; 
+                height: auto; 
+                background: white; 
+                padding: 0;
+                overflow: visible;
+                display: block !important; 
+            }
+            .receipt-card { 
+                border: 2px solid #000; 
+                box-shadow: none; 
+                margin: 0 auto;
+                max-width: 100%;
+                width: 450px;
+            }
+            .no-print { display: none !important; }
+        }
     </style>
 </head>
 <body>
-    <h1>FIPA Portal</h1>
 
-    <div class="card">
-        <h3>Add New User</h3>
-        <form id="userForm">
-            <input type="text" id="username" placeholder="Username" required>
-            <input type="password" id="password" placeholder="Password" required>
-            <select id="role">
-                <option value="user">User</option>
-                <option value="administrator">Administrator</option>
-            </select>
-            <button type="submit">Save User</button>
-        </form>
+    <!-- Login Screen -->
+    <div id="loginWrapper">
+        <div id="loginContainer" class="card">
+            <h1 id="schoolTitleDisplay">FIPA Portal</h1>
+            <h3>Sign In</h3>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="loginUsername">Username</label>
+                    <input type="text" id="loginUsername" autocomplete="off" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" id="loginPassword" autocomplete="current-password" required>
+                </div>
+                <button type="submit" style="width: 100%;">Login</button>
+                <div id="loginError" class="error"></div>
+            </form>
+        </div>
     </div>
 
-    <div class="card">
-        <h3>FIPA Portal Users</h3>
-        <table id="userTable">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Username</th>
-                    <th>Role</th>
-                    <th>Created At</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- Dynamic rows will be inserted here -->
-            </tbody>
-        </table>
+    <!-- Main Dashboard -->
+    <div id="dashboardContainer">
+        <div class="header-bar">
+            <div>
+                <h2 id="dashboardSchoolName" style="margin:0;">FIPA Portal Dashboard</h2>
+                <span id="userRoleDisplay" style="color: #666; font-weight: bold;"></span>
+            </div>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="switchTab('studentsTab', event)">Students & Billing</button>
+            <button class="nav-tab" onclick="switchTab('transactionsTab', event)">Transaction Logs</button>
+            <button class="nav-tab admin-only" onclick="switchTab('usersTab', event)">User Accounts</button>
+            <button class="nav-tab admin-only" onclick="switchTab('settingsTab', event)">System Settings</button>
+        </div>
+
+        <!-- TAB 1: Students & Billing -->
+        <div id="studentsTab" class="tab-content active">
+            <!-- Directory View -->
+            <div id="directoryView">
+                <h3>Register New Student</h3>
+                <form id="studentForm" style="display: flex; gap: 10px; margin-bottom: 25px;">
+                    <input type="text" id="studentLrn" placeholder="LRN Number" required style="flex: 1;">
+                    <input type="text" id="studentName" placeholder="Full Name" required style="flex: 2;">
+                    <button type="submit">Register Student</button>
+                </form>
+
+                <h3>Registered Students Directory</h3>
+                <table id="studentTable">
+                    <thead>
+                        <tr>
+                            <th>LRN</th>
+                            <th>Name</th>
+                            <th>Total Bill</th>
+                            <th>Running Balance</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <!-- Ledger View (Hidden by default) -->
+            <div id="ledgerSection" style="display: none;">
+                <h3>Student Account Ledger: <span id="ledgerStudentName"></span> (LRN: <span id="ledgerStudentLrn"></span>)</h3>
+                <p><strong>Current Balance: ₱<span id="ledgerBalance">0.00</span></strong></p>
+                <button onclick="closeLedger()" style="background: #6c757d; margin-bottom: 15px;">Back to Directory</button>
+                
+                <h4>10-Month Billing Schedule</h4>
+                <table id="billsTable">
+                    <thead>
+                        <tr>
+                            <th>Select</th>
+                            <th>Month</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Paid Date</th>
+                            <th>Receipt</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <button onclick="processPayment()" style="margin-top: 15px; background: #28a745;">Process Payment for Selected</button>
+            </div>
+        </div>
+
+        <!-- TAB 2: Transaction Logs -->
+        <div id="transactionsTab" class="tab-content">
+            <h3>Transaction Logs</h3>
+            <table id="transactionTable">
+                <thead>
+                    <tr>
+                        <th>OR Number</th>
+                        <th>Student Name</th>
+                        <th>LRN</th>
+                        <th>Cashier</th>
+                        <th>Amount Paid</th>
+                        <th>New Balance</th>
+                        <th>Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <!-- TAB 3: User Accounts -->
+        <div id="usersTab" class="tab-content">
+            <h3>Add System User</h3>
+            <form id="userForm" style="display: flex; gap: 10px; margin-bottom: 25px;">
+                <input type="text" id="newUsername" placeholder="Username" autocomplete="off" required style="flex: 1;">
+                <input type="password" id="newPassword" placeholder="Password" autocomplete="new-password" required style="flex: 1;">
+                <select id="newRole" style="flex: 1;">
+                    <option value="cashier">Cashier</option>
+                    <option value="admin">Admin</option>
+                    <option value="superadmin">Superadmin</option>
+                </select>
+                <button type="submit">Save User</button>
+            </form>
+
+            <h3>System User Accounts</h3>
+            <table id="userTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Username</th>
+                        <th>Role</th>
+                        <th>Created At</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <!-- TAB 4: Settings -->
+        <div id="settingsTab" class="tab-content">
+            <h3>System Settings</h3>
+            <form id="settingsForm" style="max-width: 400px;">
+                <div class="form-group">
+                    <label for="settingSchoolName">School Name</label>
+                    <input type="text" id="settingSchoolName" required>
+                </div>
+                <div class="form-group">
+                    <label for="settingStartingMonth">Starting Academic Month</label>
+                    <select id="settingStartingMonth">
+                        <option value="June">June</option>
+                        <option value="August">August</option>
+                        <option value="January">January</option>
+                    </select>
+                </div>
+                <button type="submit">Save Settings</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Official Receipt Modal -->
+    <div id="receiptModal">
+        <div class="receipt-card">
+            <div class="receipt-header">
+                <h3 id="receiptSchoolName">FIPA School</h3>
+                <p>Official Payment Receipt</p>
+            </div>
+            
+            <hr class="receipt-divider">
+            
+            <div class="receipt-row">
+                <span>OR Number:</span>
+                <span>#<span id="rcptId"></span></span>
+            </div>
+            <div class="receipt-row">
+                <span>Date & Time:</span>
+                <span><span id="rcptDate"></span></span>
+            </div>
+            <div class="receipt-row">
+                <span>Cashier:</span>
+                <span><span id="rcptCashier"></span></span>
+            </div>
+
+            <hr class="receipt-divider">
+
+            <div class="receipt-row">
+                <span>Student Name:</span>
+                <span><span id="rcptName"></span></span>
+            </div>
+            <div class="receipt-row">
+                <span>LRN Number:</span>
+                <span><span id="rcptLrn"></span></span>
+            </div>
+            <div class="receipt-row">
+                <span>Months Paid:</span>
+                <span><span id="rcptMonths"></span></span>
+            </div>
+
+            <div class="receipt-total-box">
+                <div class="receipt-row" style="font-size: 14px; margin-bottom: 4px;">
+                    <span>Amount Paid:</span>
+                    <span>₱<span id="rcptPaid"></span></span>
+                </div>
+                <div class="receipt-row" style="font-size: 13px; color: #555;">
+                    <span>Remaining Balance:</span>
+                    <span>₱<span id="rcptBalance"></span></span>
+                </div>
+            </div>
+
+            <!-- Authentication QR Code Section -->
+            <div class="receipt-qrcode-section">
+                <div id="qrcode"></div>
+                <span style="font-size: 10px; color: #555; margin-top: 5px;">Scan to Verify Receipt</span>
+            </div>
+
+            <div class="receipt-footer">
+                <p>*** VALID OFFICIAL RECEIPT ***</p>
+                <p>Thank you for your payment!</p>
+            </div>
+
+            <div class="no-print" style="margin-top: 20px; display: flex; gap: 10px; justify-content: center;">
+                <button onclick="window.print()" style="background: #28a745; flex: 1;">Print Receipt</button>
+                <button onclick="closeReceipt()" style="background: #dc3545; flex: 1;">Close</button>
+            </div>
+        </div>
     </div>
 
     <script>
-        function loadUsers() {
-            fetch('/api/data')
-                .then(response => response.json())
+        let currentUser = null;
+        let currentStudentId = null;
+        let systemSettings = {};
+
+        function loadSettings() {
+            fetch('/api/settings')
+                .then(res => res.json())
                 .then(data => {
-                    const tbody = document.querySelector('#userTable tbody');
+                    systemSettings = data;
+                    if(data.school_name) {
+                        document.getElementById('schoolTitleDisplay').innerText = data.school_name;
+                        document.getElementById('dashboardSchoolName').innerText = data.school_name + ' Dashboard';
+                        document.getElementById('settingSchoolName').value = data.school_name;
+                    }
+                    if(data.starting_month) {
+                        document.getElementById('settingStartingMonth').value = data.starting_month;
+                    }
+                });
+        }
+        loadSettings();
+
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+
+            fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    currentUser = data.user;
+                    document.getElementById('loginWrapper').style.display = 'none';
+                    document.getElementById('dashboardContainer').style.display = 'block';
+                    document.getElementById('userRoleDisplay').innerText = `Logged in: ${currentUser.username.toUpperCase()} (${currentUser.role.toUpperCase()})`;
+                    
+                    if(currentUser.role === 'cashier') {
+                        document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+                    }
+                    loadStudents();
+                    loadTransactions();
+                    loadUsers();
+                } else {
+                    document.getElementById('loginError').innerText = data.error;
+                }
+            });
+        });
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('loginForm').reset();
+            document.getElementById('loginError').innerText = '';
+            document.getElementById('dashboardContainer').style.display = 'none';
+            document.getElementById('loginWrapper').style.display = 'flex';
+        }
+
+        function switchTab(tabId, event) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            if(event && event.target) {
+                event.target.classList.add('active');
+            }
+        }
+
+        // Student Management & Ledger
+        document.getElementById('studentForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const lrn = document.getElementById('studentLrn').value;
+            const name = document.getElementById('studentName').value;
+
+            fetch('/api/students', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lrn, name })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    document.getElementById('studentForm').reset();
+                    loadStudents();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            });
+        });
+
+        function loadStudents() {
+            fetch('/api/students')
+                .then(res => res.json())
+                .then(data => {
+                    const tbody = document.querySelector('#studentTable tbody');
                     tbody.innerHTML = '';
-                    if (data.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No users found in database.</td></tr>';
+                    if(data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No students registered.</td></tr>';
                         return;
                     }
-                    data.forEach(user => {
+                    data.forEach(s => {
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
-                            <td>${user.id}</td>
-                            <td>${user.username}</td>
-                            <td>${user.role}</td>
-                            <td>${user.created_at}</td>
-                            <td>
-                                <button class="edit-btn" onclick="editUser(${user.id}, '${user.username}', '${user.role}')">Edit</button>
-                                <button class="delete-btn" onclick="deleteUser(${user.id})">Delete</button>
-                            </td>
+                            <td>${s.lrn}</td>
+                            <td>${s.name}</td>
+                            <td>₱${s.total_bill.toFixed(2)}</td>
+                            <td>₱${s.running_balance.toFixed(2)}</td>
+                            <td><button onclick="openLedger(${s.id})">View Ledger / Pay</button></td>
                         `;
                         tbody.appendChild(tr);
                     });
-                })
-                .catch(error => console.error('Error fetching data:', error));
+                });
         }
 
+        function openLedger(studentId) {
+            currentStudentId = studentId;
+            fetch(`/api/students/${studentId}`)
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('ledgerStudentName').innerText = data.student.name;
+                    document.getElementById('ledgerStudentLrn').innerText = data.student.lrn;
+                    document.getElementById('ledgerBalance').innerText = data.student.running_balance.toFixed(2);
+                    
+                    const tbody = document.querySelector('#billsTable tbody');
+                    tbody.innerHTML = '';
+                    data.bills.forEach(b => {
+                        const tr = document.createElement('tr');
+                        const isPaid = b.status === 'paid';
+                        tr.innerHTML = `
+                            <td><input type="checkbox" class="bill-checkbox" value="${b.id}" data-amount="${b.amount}" ${isPaid ? 'disabled' : ''}></td>
+                            <td>${b.month_name}</td>
+                            <td>₱${b.amount.toFixed(2)}</td>
+                            <td><span class="${isPaid ? 'badge-paid' : 'badge-unpaid'}">${b.status.toUpperCase()}</span></td>
+                            <td>${b.paid_date || '-'}</td>
+                            <td>${isPaid && b.transaction_id ? `<button onclick="viewReceipt(${b.transaction_id})" style="padding: 4px 8px; font-size: 11px; background: #17a2b8;">View Receipt</button>` : '-'}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+
+                    document.getElementById('directoryView').style.display = 'none';
+                    document.getElementById('ledgerSection').style.display = 'block';
+                });
+        }
+
+        function closeLedger() {
+            currentStudentId = null;
+            document.getElementById('ledgerSection').style.display = 'none';
+            document.getElementById('directoryView').style.display = 'block';
+            loadStudents();
+        }
+
+        function renderQRCode(textData) {
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = '';
+            new QRCode(qrContainer, {
+                text: textData,
+                width: 90,
+                height: 90,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.M
+            });
+        }
+
+        function processPayment() {
+            const checkboxes = document.querySelectorAll('.bill-checkbox:checked');
+            if(checkboxes.length === 0) {
+                alert('Please select at least one unpaid billing month.');
+                return;
+            }
+
+            let billIds = [];
+            let totalAmountPaid = 0;
+            let monthsPaidNames = [];
+            checkboxes.forEach(cb => {
+                billIds.push(parseInt(cb.value));
+                totalAmountPaid += parseFloat(cb.getAttribute('data-amount'));
+                monthsPaidNames.push(cb.closest('tr').cells[1].innerText);
+            });
+
+            fetch('/api/payments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    student_id: currentStudentId,
+                    cashier_id: currentUser.id,
+                    bill_ids: billIds,
+                    amount_paid: totalAmountPaid
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    const orNum = data.or_number;
+                    const timestamp = new Date().toLocaleString();
+                    const studentName = document.getElementById('ledgerStudentName').innerText;
+                    const studentLrn = document.getElementById('ledgerStudentLrn').innerText;
+
+                    document.getElementById('rcptId').innerText = orNum;
+                    document.getElementById('rcptDate').innerText = timestamp;
+                    document.getElementById('rcptCashier').innerText = currentUser.username;
+                    document.getElementById('rcptName').innerText = studentName;
+                    document.getElementById('rcptLrn').innerText = studentLrn;
+                    document.getElementById('rcptMonths').innerText = monthsPaidNames.join(', ');
+                    document.getElementById('rcptPaid').innerText = totalAmountPaid.toFixed(2);
+                    document.getElementById('rcptBalance').innerText = data.new_balance.toFixed(2);
+                    document.getElementById('receiptSchoolName').innerText = systemSettings.school_name || 'FIPA School';
+                    
+                    // Generate Authentication QR Code Payload
+                    renderQRCode(`OR:${orNum}|LRN:${studentLrn}|Name:${studentName}|Paid:${totalAmountPaid.toFixed(2)}|Date:${timestamp}`);
+
+                    document.getElementById('receiptModal').style.display = 'block';
+                    openLedger(currentStudentId);
+                    loadTransactions();
+                } else {
+                    alert('Payment Error: ' + data.error);
+                }
+            });
+        }
+
+        function viewReceipt(txId) {
+            fetch(`/api/transactions/${txId}/receipt`)
+                .then(res => res.json())
+                .then(data => {
+                    const tx = data.transaction;
+                    const months = data.bills.map(b => b.month_name).join(', ');
+                    const studentName = document.getElementById('ledgerStudentName').innerText;
+                    const studentLrn = document.getElementById('ledgerStudentLrn').innerText;
+                    
+                    document.getElementById('rcptId').innerText = tx.or_number;
+                    document.getElementById('rcptDate').innerText = tx.timestamp;
+                    document.getElementById('rcptCashier').innerText = tx.cashier_name;
+                    document.getElementById('rcptName').innerText = studentName;
+                    document.getElementById('rcptLrn').innerText = studentLrn;
+                    document.getElementById('rcptMonths').innerText = months;
+                    document.getElementById('rcptPaid').innerText = tx.amount_paid.toFixed(2);
+                    document.getElementById('rcptBalance').innerText = tx.new_balance.toFixed(2);
+                    document.getElementById('receiptSchoolName').innerText = systemSettings.school_name || 'FIPA School';
+                    
+                    // Generate Authentication QR Code Payload
+                    renderQRCode(`OR:${tx.or_number}|LRN:${studentLrn}|Name:${studentName}|Paid:${tx.amount_paid.toFixed(2)}|Date:${tx.timestamp}`);
+
+                    document.getElementById('receiptModal').style.display = 'block';
+                });
+        }
+
+        function closeReceipt() {
+            document.getElementById('receiptModal').style.display = 'none';
+        }
+
+        // Transactions
+        function loadTransactions() {
+            fetch('/api/transactions')
+                .then(res => res.json())
+                .then(data => {
+                    const tbody = document.querySelector('#transactionTable tbody');
+                    tbody.innerHTML = '';
+                    if(data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No transactions recorded.</td></tr>';
+                        return;
+                    }
+                    data.forEach(t => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${t.or_number}</td>
+                            <td>${t.student_name}</td>
+                            <td>${t.lrn}</td>
+                            <td>${t.cashier_name}</td>
+                            <td>₱${t.amount_paid.toFixed(2)}</td>
+                            <td>₱${t.new_balance.toFixed(2)}</td>
+                            <td>${t.timestamp}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                });
+        }
+
+        // User Management
         document.getElementById('userForm').addEventListener('submit', function(e) {
             e.preventDefault();
-            const username = document.getElementById('username').value;
-            const password_hash = document.getElementById('password').value;
-            const role = document.getElementById('role').value;
+            const username = document.getElementById('newUsername').value;
+            const password_hash = document.getElementById('newPassword').value;
+            const role = document.getElementById('newRole').value;
 
             fetch('/api/users', {
                 method: 'POST',
@@ -96,54 +666,67 @@
             })
             .then(res => res.json())
             .then(data => {
-                if (data.success) {
+                if(data.success) {
                     document.getElementById('userForm').reset();
                     loadUsers();
                 } else {
-                    alert('Error adding user: ' + data.error);
+                    alert('Error: ' + data.error);
                 }
-            })
-            .catch(err => console.error('Error:', err));
+            });
         });
 
-        function editUser(id, currentUsername, currentRole) {
-            const newUsername = prompt('Edit username:', currentUsername);
-            if (newUsername === null) return;
-            const newRole = prompt('Edit role (user / administrator):', currentRole);
-            if (newRole === null) return;
-
-            fetch(`/api/users/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: newUsername, role: newRole })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    loadUsers();
-                } else {
-                    alert('Error updating user: ' + data.error);
-                }
-            })
-            .catch(err => console.error('Error:', err));
+        function loadUsers() {
+            fetch('/api/users')
+                .then(res => res.json())
+                .then(data => {
+                    const tbody = document.querySelector('#userTable tbody');
+                    tbody.innerHTML = '';
+                    data.forEach(u => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${u.id}</td>
+                            <td>${u.username}</td>
+                            <td>${u.role}</td>
+                            <td>${u.created_at}</td>
+                            <td>${u.id !== currentUser.id ? `<button class="delete-btn" onclick="deleteUser(${u.id})">Delete</button>` : 'Current User'}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                });
         }
 
         function deleteUser(id) {
-            if (confirm('Are you sure you want to delete this user?')) {
+            if(confirm('Delete this user?')) {
                 fetch(`/api/users/${id}`, { method: 'DELETE' })
                     .then(res => res.json())
                     .then(data => {
-                        if (data.success) {
-                            loadUsers();
-                        } else {
-                            alert('Error deleting user: ' + data.error);
-                        }
-                    })
-                    .catch(err => console.error('Error:', err));
+                        if(data.success) loadUsers();
+                        else alert('Error: ' + data.error);
+                    });
             }
         }
 
-        loadUsers();
+        // Settings Form
+        document.getElementById('settingsForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const school_name = document.getElementById('settingSchoolName').value;
+            const starting_month = document.getElementById('settingStartingMonth').value;
+
+            fetch('/api/settings', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ school_name, starting_month })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    alert('Settings updated successfully!');
+                    loadSettings();
+                } else {
+                    alert('Error updating settings.');
+                }
+            });
+        });
     </script>
 </body>
 </html>
