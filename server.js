@@ -15,6 +15,10 @@ const db = new sqlite3.Database(dbFile, (err) => {
                 console.error('Error executing schema', err);
             } else {
                 console.log('Database tables verified/created successfully.');
+                
+                db.run("INSERT OR IGNORE INTO users (id, username, password_hash, role) VALUES (1, 'admin', 'hash123', 'administrator')", (insertErr) => {
+                    if (!insertErr) console.log('Sample user verified/inserted.');
+                });
             }
         });
     }
