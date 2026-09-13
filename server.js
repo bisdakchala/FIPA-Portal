@@ -15,12 +15,36 @@ const db = new sqlite3.Database(dbFile, (err) => {
                 console.error('Error executing schema', err);
             } else {
                 console.log('Database tables verified/created successfully.');
+                db.run("INSERT OR IGNORE INTO users (id, username, password_hash, role) VALUES (1, 'admin', 'hash123', 'administrator')", (insertErr) => {
+                    if (!insertErr) console.log('Sample user verified/inserted.');
+                });
             }
         });
     }
 });
 
 const server = http.createServer((req, res) => {
+    // Handle POST request to add a new user
+    if (req.method === 'POST' && req.url === '/api/users') {
+        let body = '';
+        req.on('data', chunk => { body += chunk.toString(); });
+        req.on('end', () => {
+            const { username, password_hash, role } = JSON.parse(body);
+            const query = `INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)`;
+            db.run(query, [username, password_hash, role || 'user'], function(err) {
+                if (err) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: err.message }));
+                } else {
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: true, id: this.lastID }));
+                }
+            });
+        });
+        return;
+    }
+
+    // Handle GET request for user data
     if (req.url === '/api/data') {
         db.all("SELECT * FROM users", [], (err, rows) => {
             if (err) {
@@ -32,6 +56,7 @@ const server = http.createServer((req, res) => {
             res.end(JSON.stringify(rows));
         });
     } else {
+        // Serve frontend HTML page
         let filePath = path.join(__dirname, 'index.html');
         fs.readFile(filePath, (err, content) => {
             if (err) {
