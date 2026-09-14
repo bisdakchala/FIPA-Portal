@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Portal - Balance Lookup</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; margin: 0; background-color: #f4f7f6; color: #333; }
+        .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 350px; margin: auto; box-sizing: border-box; }
+        h3 { color: #333; margin-top: 0; text-align: center; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
+        input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; }
+        button { padding: 10px 15px; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; font-size: 14px; }
+        button:hover { background: #0056b3; }
+        .error { color: #dc3545; font-size: 14px; text-align: center; margin-top: 10px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
+        th { background-color: #007bff; color: white; }
+        .badge-paid { background: #28a745; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+        .badge-unpaid { background: #dc3545; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+    <div id="portalWrapper" style="display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; box-sizing: border-box; flex-wrap: wrap;">
+        <!-- Query Card -->
+        <div id="portalQueryCard" class="card" style="width: 380px;">
+            <div style="text-align: center; margin-bottom: 15px;">
+                <img src="logo.png" alt="School Logo" style="max-height: 55px; width: auto;">
+            </div>
+            <h3>Student Balance Lookup</h3>
+            <div class="form-group">
+                <label for="lookupLrn">Enter Student LRN</label>
+                <input type="text" id="lookupLrn" placeholder="e.g., 123456789012" autocomplete="off" required>
+            </div>
+            <div class="form-group">
+                <label for="lookupPin">Portal PIN / Passcode</label>
+                <input type="password" id="lookupPin" placeholder="4-digit PIN" autocomplete="current-password" required>
+            </div>
+            <button onclick="lookupStudentPortal()" style="width: 100%;">Check Balance & History</button>
+            <button type="button" onclick="window.location.href='/'" style="width: 100%; background: #6c757d; margin-top: 10px;">Back to Home Gateway</button>
+            <div id="portalError" class="error"></div>
+        </div>
+
+        <!-- Results Card -->
+        <div id="portalResultsCard" class="card" style="display: none; width: 550px; margin-top: 20px;">
+            <h3 style="margin-bottom: 5px;">Account Summary</h3>
+            <p style="text-align: center; color: #555; margin-top: 0;" id="portalSchoolNameDisplay"></p>
+            <hr style="border: none; border-top: 1px solid #ddd; margin: 15px 0;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span>Student Name:</span><strong id="portalName"></strong></div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span>LRN Number:</span><strong id="portalLrnDisplay"></strong></div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;"><span>Running Balance:</span><strong style="color: #28a745; font-size: 16px;">AED <span id="portalBalance">0.00</span></strong></div>
+            <h4>Billing Schedule</h4>
+            <table id="portalBillsTable">
+                <thead><tr><th>Month</th><th>Amount</th><th>Status</th><th>Paid Date</th></tr></thead>
+                <tbody></tbody>
+            </table>
+            <button onclick="resetPortal()" style="width: 100%; background: #6c757d; margin-top: 20px;">Lookup Another LRN</button>
+        </div>
+    </div>
+
+    <script>
+        let systemSettings = {};
+
+        function loadSettings() {
+            fetch('/api/settings')
+                .then(res => res.json())
+                .then(data => { systemSettings = data; });
+        }
+        loadSettings();
+
+        function lookupStudentPortal() {
+            const lrn = document.getElementById('lookupLrn').value.trim();
+            const pin = document.getElementById('lookupPin').value.trim();
+            if(!lrn || !pin) {
+                document.getElementById('portalError').innerText = 'Please enter both LRN and Portal PIN.';
+                return;
+            }
+
+            fetch(`/api/portal/lookup?lrn=${encodeURIComponent(lrn)}&pin=${encodeURIComponent(pin)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if(data.error) {
+                        document.getElementById('portalError').innerText = data.error;
+                        document.getElementById('portalResultsCard').style.display = 'none';
+                    } else {
+                        document.getElementById('portalError').innerText = '';
+                        document.getElementById('portalQueryCard').style.display = 'none';
+                        document.getElementById('portalResultsCard').style.display = 'block';
+                        document.getElementById('portalSchoolNameDisplay').innerText = systemSettings.school_name || 'FIPA Academy';
+                        document.getElementById('portalName').innerText = `${data.student.last_name}, ${data.student.first_name}${data.student.middle_name ? ' ' + data.student.middle_name : ''}`;
+                        document.getElementById('portalLrnDisplay').innerText = data.student.lrn;
+                        document.getElementById('portalBalance').innerText = data.student.running_balance.toFixed(2);
+
+                        const tbody = document.querySelector('#portalBillsTable tbody');
+                        tbody.innerHTML = '';
+                        data.bills.forEach(b => {
+                            const tr = document.createElement('tr');
+                            const isPaid = b.status === 'paid';
+                            tr.innerHTML = `
+                                <td>${b.month_name}</td>
+                                <td>AED ${b.amount.toFixed(2)}</td>
+                                <td><span class="${isPaid ? 'badge-paid' : 'badge-unpaid'}">${b.status.toUpperCase()}</span></td>
+                                <td>${b.paid_date || '-'}</td>
+                            `;
+                            tbody.appendChild(tr);
+                        });
+                    }
+                })
+                .catch(() => document.getElementById('portalError').innerText = 'Connection error. Please try again.');
+        }
+
+        function resetPortal() {
+            document.getElementById('portalResultsCard').style.display = 'none';
+            document.getElementById('portalQueryCard').style.display = 'block';
+            document.getElementById('lookupLrn').value = '';
+            document.getElementById('lookupPin').value = '';
+        }
+    </script>
+</body>
+</html>
