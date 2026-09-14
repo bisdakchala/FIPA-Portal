@@ -5,14 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FIPA Academy - School Billing & Management</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; margin: 0; background-color: #f4f7f6; color: #333; }
+        body { font-family: Arial, sans-serif; margin: 0; background-color: #f4f7f6; color: #333; }
         .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 350px; margin: auto; box-sizing: border-box; }
         h1, h3 { color: #333; margin-top: 0; text-align: center; }
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
-        input, select { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
         button { padding: 10px 15px; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; font-size: 14px; }
         button:hover { background: #0056b3; }
         .error { color: #dc3545; font-size: 14px; text-align: center; margin-top: 10px; }
@@ -42,55 +41,39 @@
         .badge-action { background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
         .delete-btn { background: #dc3545; padding: 5px 10px; font-size: 12px; }
 
-        /* Receipt Modal - Compact typography and spacing optimized for half-A4 footprint */
         #receiptModal {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(15, 23, 42, 0.75); overflow-y: auto; padding: 20px 0; box-sizing: border-box; z-index: 1000;
+            background: rgba(15, 23, 42, 0.7); overflow-y: auto; padding: 30px 0; box-sizing: border-box; z-index: 1000;
         }
         .receipt-card {
-            background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 20px 24px;
-            width: 100%; max-width: 420px; margin: 0 auto; font-family: 'Inter', system-ui, -apple-system, sans-serif; color: #1e293b;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2); box-sizing: border-box; font-size: 11.5px;
+            background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 30px;
+            max-width: 440px; margin: 0 auto; font-family: 'Courier New', Courier, monospace; color: #1e293b;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
         }
-        .receipt-header { text-align: center; margin-bottom: 12px; }
-        .receipt-header h3 { margin: 0 0 2px 0; font-size: 18px; font-weight: 700; text-transform: uppercase; color: #0f172a; letter-spacing: 0.5px; }
-        .receipt-header p { margin: 0; font-size: 10.5px; font-weight: 500; color: #64748b; text-transform: uppercase; letter-spacing: 1.2px; }
+        .receipt-header { text-align: center; margin-bottom: 15px; }
+        .receipt-header h3 { margin: 0 0 4px 0; font-size: 22px; font-weight: bold; text-transform: uppercase; color: #0f172a; letter-spacing: 0.5px; }
+        .receipt-header p { margin: 0; font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; }
+        .receipt-divider { border: none; border-top: 1px dashed #94a3b8; margin: 14px 0; }
+        .receipt-row { display: flex; justify-content: space-between; margin-bottom: 7px; font-size: 13px; }
+        .receipt-row span:first-child { font-weight: bold; color: #475569; }
+        .receipt-row span:last-child { color: #0f172a; text-align: right; }
         
-        .receipt-divider { border: none; border-top: 1px solid #e2e8f0; margin: 10px 0; }
-        .receipt-divider-dashed { border: none; border-top: 1px dashed #cbd5e1; margin: 10px 0; }
-        
-        .receipt-meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; margin-bottom: 2px; font-size: 11px; }
-        .receipt-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 11.5px; }
-        .receipt-row span:first-child { font-weight: 600; color: #475569; }
-        .receipt-row span:last-child { color: #0f172a; text-align: right; font-weight: 500; }
-        
-        .receipt-items-container { margin: 10px 0; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 12px; }
-        .receipt-items-title { font-size: 10px; font-weight: 700; margin-bottom: 4px; color: #475569; text-transform: uppercase; letter-spacing: 0.8px; }
-        .receipt-item-row { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px; color: #334155; }
-        .receipt-item-row:last-child { margin-bottom: 0; }
+        .receipt-items-container { margin: 15px 0; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; padding: 10px 0; }
+        .receipt-item-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; color: #334155; }
 
-        .receipt-total-box { background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 12px; margin: 10px 0; }
-        .receipt-total-row { display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 4px; font-weight: 700; color: #0f172a; }
-        .receipt-balance-row { display: flex; justify-content: space-between; font-size: 11px; color: #64748b; font-weight: 500; }
+        .receipt-total-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; margin: 15px 0; }
+        .receipt-total-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 5px; font-weight: bold; color: #0f172a; }
+        .receipt-balance-row { display: flex; justify-content: space-between; font-size: 12px; color: #64748b; }
 
-        .receipt-qrcode-section { display: flex; flex-direction: column; align-items: center; margin: 10px 0 6px 0; }
-        #qrcode { background: white; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; }
-        .receipt-footer { text-align: center; font-size: 10px; color: #64748b; margin-top: 10px; line-height: 1.4; font-weight: 500; }
+        .receipt-qrcode-section { display: flex; flex-direction: column; align-items: center; margin: 15px 0; }
+        #qrcode { background: white; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; }
+        .receipt-footer { text-align: center; font-size: 11px; color: #64748b; margin-top: 15px; line-height: 1.4; }
 
         @media print {
-            @page {
-                size: A4;
-                margin: 0;
-            }
             body * { visibility: hidden; }
             #receiptModal, #receiptModal * { visibility: visible; }
-            #receiptModal { 
-                position: absolute; left: 0; top: 0; width: 100vw; height: 50vh; 
-                background: white; padding: 10px; display: flex !important; align-items: center; justify-content: center;
-            }
-            .receipt-card { 
-                border: none; box-shadow: none; margin: 0 auto; width: 148mm; max-height: 190mm; padding: 10px 15px; font-size: 10.5px;
-            }
+            #receiptModal { position: absolute; left: 0; top: 0; width: 100%; height: auto; background: white; padding: 0; display: block !important; }
+            .receipt-card { border: none; box-shadow: none; margin: 0 auto; width: 100%; max-width: 400px; padding: 10px; }
             .no-print { display: none !important; }
         }
     </style>
@@ -142,7 +125,7 @@
             <hr style="border: none; border-top: 1px solid #ddd; margin: 15px 0;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span>Student Name:</span><strong id="portalName"></strong></div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span>LRN Number:</span><strong id="portalLrnDisplay"></strong></div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;"><span>Running Balance:</span><strong style="color: #28a745; font-size: 16px;">AED <span id="portalBalance">0.00</span></strong></div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;"><span>Running Balance:</span><strong style="color: #28a745; font-size: 16px;">₱<span id="portalBalance">0.00</span></strong></div>
             <h4>Billing Schedule</h4>
             <table id="portalBillsTable">
                 <thead><tr><th>Month</th><th>Amount</th><th>Status</th><th>Paid Date</th></tr></thead>
@@ -165,7 +148,7 @@
         <div class="nav-tabs">
             <button class="nav-tab active" onclick="switchTab('studentsTab', event)">Students & Billing</button>
             <button class="nav-tab" onclick="switchTab('transactionsTab', event)">Transaction Logs</button>
-            <button class="nav-tab admin-only" onclick="switchTab('reportsTab', event)">Collection Reports</button>
+            <button class="nav-tab admin-only" onclick="switchTab('reportsTab', event)">Daily Reports</button>
             <button class="nav-tab admin-only" onclick="switchTab('logsTab', event)">Activity Logs</button>
             <button class="nav-tab admin-only" onclick="switchTab('usersTab', event)">User Accounts</button>
             <button class="nav-tab admin-only" onclick="switchTab('settingsTab', event)">System Settings</button>
@@ -192,7 +175,7 @@
 
             <div id="ledgerSection" style="display: none;">
                 <h3>Student Account Ledger: <span id="ledgerStudentName"></span> (LRN: <span id="ledgerStudentLrn"></span>)</h3>
-                <p><strong>Current Balance: AED <span id="ledgerBalance">0.00</span></strong></p>
+                <p><strong>Current Balance: ₱<span id="ledgerBalance">0.00</span></strong></p>
                 <div style="margin-bottom: 15px;">
                     <button onclick="closeLedger()" style="background: #6c757d;">Back to Directory</button>
                     <button onclick="changeStudentPin()" style="background: #17a2b8; margin-left: 10px;">Change Portal PIN</button>
@@ -215,36 +198,18 @@
             </table>
         </div>
 
-        <!-- TAB 3: Collection Reports -->
+        <!-- TAB 3: Daily Reports -->
         <div id="reportsTab" class="tab-content">
-            <h3>Collection Reports & Analytics</h3>
-            <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px; flex-wrap: wrap;">
-                <div>
-                    <label for="reportPeriod" style="font-weight: bold; margin: 0; font-size: 12px;">Report Period:</label>
-                    <select id="reportPeriod" style="padding: 8px; margin-top: 4px;">
-                        <option value="daily">Daily</option>
-                        <option value="weekly">Weekly</option>
-                        <option value="monthly">Monthly</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="reportCashier" style="font-weight: bold; margin: 0; font-size: 12px;">Filter Cashier:</label>
-                    <select id="reportCashier" style="padding: 8px; margin-top: 4px; min-width: 150px;">
-                        <option value="all">All Cashiers</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="reportDate" style="font-weight: bold; margin: 0; font-size: 12px;">Reference Date:</label>
-                    <input type="date" id="reportDate" style="padding: 7px; margin-top: 4px;" onchange="loadReport()">
-                </div>
-                <div style="align-self: flex-end;">
-                    <button onclick="loadReport()" style="padding: 9px 15px;">Generate Report</button>
-                </div>
+            <h3>End-of-Day Collection Summary</h3>
+            <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px;">
+                <label for="reportDate" style="font-weight: bold; margin: 0;">Select Date:</label>
+                <input type="date" id="reportDate" style="max-width: 200px;" onchange="loadDailyReport()">
+                <button onclick="loadDailyReport()" style="padding: 10px 15px;">Generate Report</button>
             </div>
             <div style="display: flex; gap: 20px; margin-bottom: 25px;">
                 <div style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 15px; border-radius: 6px; flex: 1;">
                     <h4 style="margin: 0 0 5px 0; color: #555; font-size: 13px;">Total Collected</h4>
-                    <span id="summaryTotal" style="font-size: 24px; font-weight: bold; color: #28a745;">AED 0.00</span>
+                    <span id="summaryTotal" style="font-size: 24px; font-weight: bold; color: #28a745;">₱0.00</span>
                 </div>
                 <div style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 15px; border-radius: 6px; flex: 1;">
                     <h4 style="margin: 0 0 5px 0; color: #555; font-size: 13px;">Total Transactions</h4>
@@ -319,30 +284,30 @@
             <div class="receipt-row"><span>OR Number:</span><span>#<span id="rcptId"></span></span></div>
             <div class="receipt-row"><span>Date & Time:</span><span><span id="rcptDate"></span></span></div>
             <div class="receipt-row"><span>Cashier:</span><span><span id="rcptCashier"></span></span></div>
-            <hr class="receipt-divider-dashed">
+            <hr class="receipt-divider">
             <div class="receipt-row"><span>Student Name:</span><span><span id="rcptName"></span></span></div>
             <div class="receipt-row"><span>LRN Number:</span><span><span id="rcptLrn"></span></span></div>
             
             <div class="receipt-items-container">
-                <div class="receipt-items-title">Paid Items / Months:</div>
+                <div style="font-size: 11px; font-weight: bold; margin-bottom: 4px; color: #475569; text-transform: uppercase;">Paid Items / Months:</div>
                 <div id="rcptItemsList"></div>
             </div>
 
             <div class="receipt-total-box">
-                <div class="receipt-total-row"><span>Amount Paid:</span><span>AED <span id="rcptPaid"></span></span></div>
-                <div class="receipt-balance-row"><span>Remaining Balance:</span><span>AED <span id="rcptBalance"></span></span></div>
+                <div class="receipt-total-row"><span>Amount Paid:</span><span>₱<span id="rcptPaid"></span></span></div>
+                <div class="receipt-balance-row"><span>Remaining Balance:</span><span>₱<span id="rcptBalance"></span></span></div>
             </div>
             <div class="receipt-qrcode-section">
                 <div id="qrcode"></div>
-                <span style="font-size: 9.5px; color: #64748b; margin-top: 4px; font-weight: 500;">Scan QR to Verify Receipt</span>
+                <span style="font-size: 10px; color: #64748b; margin-top: 6px;">Scan QR to Verify Receipt</span>
             </div>
             <div class="receipt-footer">
-                <p style="margin: 0 0 1px 0; font-weight: 600; color: #475569;">*** VALID OFFICIAL RECEIPT ***</p>
-                <p style="margin: 0;">Thank you for your payment!</p>
+                <p>*** VALID OFFICIAL RECEIPT ***</p>
+                <p>Thank you for your payment!</p>
             </div>
-            <div class="no-print" style="margin-top: 14px; display: flex; gap: 10px; justify-content: center;">
-                <button onclick="window.print()" style="background: #28a745; flex: 1; font-weight: 600; padding: 8px 12px; font-size: 13px;">Print Receipt</button>
-                <button onclick="closeReceipt()" style="background: #dc3545; flex: 1; font-weight: 600; padding: 8px 12px; font-size: 13px;">Close</button>
+            <div class="no-print" style="margin-top: 20px; display: flex; gap: 10px; justify-content: center;">
+                <button onclick="window.print()" style="background: #28a745; flex: 1;">Print Receipt</button>
+                <button onclick="closeReceipt()" style="background: #dc3545; flex: 1;">Close</button>
             </div>
         </div>
     </div>
@@ -396,7 +361,7 @@
                     loadStudents();
                     loadTransactions();
                     loadUsers();
-                    loadReport();
+                    loadDailyReport();
                     loadActivityLogs();
                 } else {
                     document.getElementById('loginError').innerText = data.error;
@@ -459,7 +424,7 @@
                             const isPaid = b.status === 'paid';
                             tr.innerHTML = `
                                 <td>${b.month_name}</td>
-                                <td>AED ${b.amount.toFixed(2)}</td>
+                                <td>₱${b.amount.toFixed(2)}</td>
                                 <td><span class="${isPaid ? 'badge-paid' : 'badge-unpaid'}">${b.status.toUpperCase()}</span></td>
                                 <td>${b.paid_date || '-'}</td>
                             `;
@@ -534,8 +499,8 @@
                         tr.innerHTML = `
                             <td>${s.lrn}</td>
                             <td>${fullName}</td>
-                            <td>AED ${s.total_bill.toFixed(2)}</td>
-                            <td>AED ${s.running_balance.toFixed(2)}</td>
+                            <td>₱${s.total_bill.toFixed(2)}</td>
+                            <td>₱${s.running_balance.toFixed(2)}</td>
                             <td><button onclick="openLedger(${s.id})">View Ledger / Pay</button></td>
                         `;
                         tbody.appendChild(tr);
@@ -561,7 +526,7 @@
                         tr.innerHTML = `
                             <td><input type="checkbox" class="bill-checkbox" value="${b.id}" data-amount="${b.amount}" ${isPaid ? 'disabled' : ''}></td>
                             <td>${b.month_name}</td>
-                            <td>AED ${b.amount.toFixed(2)}</td>
+                            <td>₱${b.amount.toFixed(2)}</td>
                             <td><span class="${isPaid ? 'badge-paid' : 'badge-unpaid'}">${b.status.toUpperCase()}</span></td>
                             <td>${b.paid_date || '-'}</td>
                             <td>${isPaid && b.transaction_id ? `<button onclick="viewReceipt(${b.transaction_id})" style="padding: 4px 8px; font-size: 11px; background: #17a2b8;">View Receipt</button>` : '-'}</td>
@@ -605,7 +570,7 @@
             const qrContainer = document.getElementById('qrcode');
             qrContainer.innerHTML = '';
             new QRCode(qrContainer, {
-                text: textData, width: 68, height: 68,
+                text: textData, width: 90, height: 90,
                 colorDark: "#000000", colorLight: "#ffffff",
                 correctLevel: QRCode.CorrectLevel.M
             });
@@ -627,7 +592,7 @@
                 const amt = parseFloat(cb.getAttribute('data-amount'));
                 totalAmountPaid += amt;
                 const monthName = cb.closest('tr').cells[1].innerText;
-                paidItemsHtml += `<div class="receipt-item-row"><span>${monthName}</span><span>AED ${amt.toFixed(2)}</span></div>`;
+                paidItemsHtml += `<div class="receipt-item-row"><span>${monthName}</span><span>₱${amt.toFixed(2)}</span></div>`;
             });
 
             fetch('/api/payments', {
@@ -662,7 +627,7 @@
                     document.getElementById('receiptModal').style.display = 'block';
                     openLedger(currentStudentId);
                     loadTransactions();
-                    loadReport();
+                    loadDailyReport();
                     loadActivityLogs();
                 } else {
                     alert('Payment Error: ' + data.error);
@@ -680,7 +645,7 @@
                     
                     let paidItemsHtml = '';
                     data.bills.forEach(b => {
-                        paidItemsHtml += `<div class="receipt-item-row"><span>${b.month_name}</span><span>AED ${b.amount.toFixed(2)}</span></div>`;
+                        paidItemsHtml += `<div class="receipt-item-row"><span>${b.month_name}</span><span>₱${b.amount.toFixed(2)}</span></div>`;
                     });
                     
                     document.getElementById('rcptId').innerText = tx.or_number;
@@ -719,8 +684,8 @@
                             <td>${t.student_name}</td>
                             <td>${t.lrn}</td>
                             <td>${t.cashier_name}</td>
-                            <td>AED ${t.amount_paid.toFixed(2)}</td>
-                            <td>AED ${t.new_balance.toFixed(2)}</td>
+                            <td>₱${t.amount_paid.toFixed(2)}</td>
+                            <td>₱${t.new_balance.toFixed(2)}</td>
                             <td>${t.timestamp}</td>
                         `;
                         tbody.appendChild(tr);
@@ -728,34 +693,19 @@
                 });
         }
 
-        function populateReportCashiers(usersList) {
-            const select = document.getElementById('reportCashier');
-            const currentVal = select.value;
-            select.innerHTML = '<option value="all">All Cashiers</option>';
-            usersList.forEach(u => {
-                const opt = document.createElement('option');
-                opt.value = u.id;
-                opt.textContent = `${u.username} (${u.role})`;
-                select.appendChild(opt);
-            });
-            select.value = currentVal;
-        }
-
-        function loadReport() {
-            const period = document.getElementById('reportPeriod').value;
-            const cashierId = document.getElementById('reportCashier').value;
+        function loadDailyReport() {
             const dateInput = document.getElementById('reportDate').value || new Date().toISOString().split('T')[0];
             if(!document.getElementById('reportDate').value) document.getElementById('reportDate').value = dateInput;
 
-            fetch(`/api/reports?period=${period}&date=${dateInput}&cashier_id=${cashierId}`)
+            fetch(`/api/reports/daily?date=${dateInput}`)
                 .then(res => res.json())
                 .then(data => {
-                    document.getElementById('summaryTotal').innerText = `AED ${data.total_collected.toFixed(2)}`;
+                    document.getElementById('summaryTotal').innerText = `₱${data.total_collected.toFixed(2)}`;
                     document.getElementById('summaryCount').innerText = data.transaction_count;
                     const tbody = document.querySelector('#dailyReportTable tbody');
                     tbody.innerHTML = '';
                     if(data.transactions.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No collections recorded for this filter criteria.</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No collections recorded for this date.</td></tr>';
                         return;
                     }
                     data.transactions.forEach(t => {
@@ -766,7 +716,7 @@
                             <td>${t.student_name}</td>
                             <td>${t.lrn}</td>
                             <td>${t.cashier_name}</td>
-                            <td>AED ${t.amount_paid.toFixed(2)}</td>
+                            <td>₱${t.amount_paid.toFixed(2)}</td>
                         `;
                         tbody.appendChild(tr);
                     });
@@ -824,7 +774,6 @@
             fetch('/api/users')
                 .then(res => res.json())
                 .then(data => {
-                    populateReportCashiers(data);
                     const tbody = document.querySelector('#userTable tbody');
                     tbody.innerHTML = '';
                     data.forEach(u => {

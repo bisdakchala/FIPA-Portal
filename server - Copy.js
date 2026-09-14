@@ -1,14 +1,19 @@
 const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const rateLimit = require('express-rate-limit');
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
+
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname)));
+app.use(express.static(path.join(__dirname, 'public')));
 
 const dbFile = path.join(__dirname, 'database.sqlite');
 const db = new sqlite3.Database(dbFile, (err) => {
@@ -18,7 +23,11 @@ const db = new sqlite3.Database(dbFile, (err) => {
 
 function logActivity(userId, username, action, details) {
     db.run(`INSERT INTO activity_logs (user_id, username, action, details) VALUES (?, ?, ?, ?)`,
-        [userId || null, username || 'SYSTEM', action, details]);
+        [userId || null, username || 'SYSTEM', action, details], function(err) {
+            if (!err) {
+                io.emit('refresh_logs');
+            }
+        });
 }
 
 db.serialize(() => {
@@ -139,7 +148,7 @@ app.post('/api/login', (req, res) => {
 app.get('/api/users', (req, res) => {
     db.all(`SELECT id, username, role, created_at FROM users`, [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json(rows);
+        res.json({ success: true, data: rows });
     });
 });
 
@@ -248,6 +257,32 @@ app.get('/api/portal/lookup', portalLimiter, (req, res) => {
     });
 });
 
+app.get('/api/reports', (req, res) => {
+    const { period, cashier_id } = req.query;
+    let query = `SELECT t.*, u.username, (s.last_name || ', ' || s.first_name) as student_name FROM transactions t LEFT JOIN users u ON t.cashier_id = u.id LEFT JOIN students s ON t.student_id = s.id WHERE 1=1`;
+    let params = [];
+
+    if (period === 'daily') {
+        query += ` AND date(t.timestamp) = date('now')`;
+    } else if (period === 'weekly') {
+        query += ` AND strftime('%Y-%W', t.timestamp) = strftime('%Y-%W', 'now')`;
+    } else if (period === 'monthly') {
+        query += ` AND strftime('%Y-%m', t.timestamp) = strftime('%Y-%m', 'now')`;
+    }
+
+    if (cashier_id && cashier_id !== 'all') {
+        query += ` AND t.cashier_id = ?`;
+        params.push(cashier_id);
+    }
+
+    query += ` ORDER BY t.timestamp DESC`;
+
+    db.all(query, params, (err, rows) => {
+        if (err) return res.status(500).json({ success: false, error: err.message });
+        res.json({ success: true, data: rows });
+    });
+});
+
 app.post('/api/payments', (req, res) => {
     const { student_id, cashier_id, bill_ids, amount_paid } = req.body;
     if (!bill_ids || bill_ids.length === 0) return res.status(400).json({ success: false, error: 'No bills selected.' });
@@ -301,7 +336,8 @@ app.post('/api/payments', (req, res) => {
                             db.run('COMMIT');
                             db.get(`SELECT username FROM users WHERE id = ?`, [cashier_id], (err, cashierRow) => {
                                 const cashierName = cashierRow ? cashierRow.username : 'CASHIER';
-                                logActivity(cashier_id, cashierName, 'PAYMENT_PROCESSED', `Processed payment OR: ${orNumber} amounting to AED ${amount_paid} for student "${fullName}".`);
+                                logActivity(cashier_id, cashierName, 'PAYMENT_PROCESSED', `Processed payment OR: ${orNumber} amounting to ₱${amount_paid} for student "${fullName}".`);
+                                io.emit('refresh_reports');
                                 res.json({ success: true, or_number: orNumber, new_balance: newBalance });
                             });
                         });
@@ -343,40 +379,18 @@ app.get('/api/transactions/:id/receipt', (req, res) => {
     });
 });
 
-app.get('/api/reports', (req, res) => {
-    const { period = 'daily', date = new Date().toISOString().split('T')[0], cashier_id } = req.query;
-    
-    let dateCondition = '';
-    if (period === 'daily') {
-        dateCondition = `DATE(t.timestamp) = DATE(?)`;
-    } else if (period === 'weekly') {
-        dateCondition = `strftime('%Y-%W', t.timestamp) = strftime('%Y-%W', ?)`;
-    } else if (period === 'monthly') {
-        dateCondition = `strftime('%Y-%m', t.timestamp) = strftime('%Y-%m', ?)`;
-    } else {
-        dateCondition = `DATE(t.timestamp) = DATE(?)`;
-    }
-
-    let query = `
-        SELECT t.id, t.or_number, t.amount_paid, t.timestamp, u.id as cashier_id, u.username as cashier_name, (s.last_name || ', ' || s.first_name) as student_name, s.lrn
+app.get('/api/reports/daily', (req, res) => {
+    const dateFilter = req.query.date || new Date().toISOString().split('T')[0];
+    db.all(`
+        SELECT t.id, t.or_number, t.amount_paid, t.timestamp, u.username as cashier_name, (s.last_name || ', ' || s.first_name) as student_name, s.lrn
         FROM transactions t
         JOIN users u ON t.cashier_id = u.id
         JOIN students s ON t.student_id = s.id
-        WHERE ${dateCondition}
-    `;
-    let params = [date];
-
-    if (cashier_id && cashier_id !== 'all') {
-        query += ` AND t.cashier_id = ?`;
-        params.push(cashier_id);
-    }
-
-    query += ` ORDER BY t.timestamp DESC`;
-
-    db.all(query, params, (err, rows) => {
+        WHERE DATE(t.timestamp) = DATE(?)
+    `, [dateFilter], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         const totalCollected = rows.reduce((sum, r) => sum + r.amount_paid, 0);
-        res.json({ period, date, cashier_id: cashier_id || 'all', total_collected: totalCollected, transaction_count: rows.length, transactions: rows });
+        res.json({ date: dateFilter, total_collected: totalCollected, transaction_count: rows.length, transactions: rows });
     });
 });
 
@@ -387,6 +401,24 @@ app.get('/api/logs', (req, res) => {
     });
 });
 
-app.listen(PORT, () => {
+io.on('connection', (socket) => {
+    console.log('Client connected:', socket.id);
+
+    socket.on('new_report', (data) => {
+        const { cashier_id, total_sales } = data;
+        db.run(`INSERT INTO transactions (or_number, student_id, cashier_id, amount_paid, new_balance) VALUES (?, NULL, ?, ?, 0)`, 
+            [`SIM-${Date.now().toString().slice(-6)}`, cashier_id, total_sales], function(err) {
+            if (!err) {
+                io.emit('refresh_reports');
+            }
+        });
+    });
+
+    socket.on('disconnect', () => {
+        console.log('Client disconnected:', socket.id);
+    });
+});
+
+server.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 });
