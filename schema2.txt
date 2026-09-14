@@ -9,10 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS students (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     lrn TEXT UNIQUE NOT NULL,
-    first_name TEXT NOT NULL,
-    middle_name TEXT,
-    last_name TEXT NOT NULL,
-    portal_pin TEXT DEFAULT '1234',
+    name TEXT NOT NULL,
     total_bill REAL DEFAULT 10000.0,
     running_balance REAL DEFAULT 10000.0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -30,7 +27,6 @@ CREATE TABLE IF NOT EXISTS student_bills (
 
 CREATE TABLE IF NOT EXISTS transactions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    or_number TEXT UNIQUE,
     student_id INTEGER,
     cashier_id INTEGER,
     amount_paid REAL NOT NULL,
