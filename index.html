@@ -100,7 +100,9 @@
     <!-- Login Screen -->
     <div id="loginWrapper">
         <div id="loginContainer" class="card">
-            <h1 id="schoolTitleDisplay">FIPA Academy</h1>
+            <div style="text-align: center; margin-bottom: 15px;">
+                <img src="logo.png" alt="School Logo" style="max-height: 65px; width: auto;">
+            </div>
             <h3>Staff Sign In</h3>
             <form id="loginForm">
                 <div class="form-group">
@@ -121,7 +123,9 @@
     <!-- Parent / Student Portal Screen -->
     <div id="portalWrapper" style="display: none; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; box-sizing: border-box; flex-wrap: wrap;">
         <div id="portalQueryCard" class="card" style="width: 380px;">
-            <h1 id="portalSchoolTitle">FIPA Academy</h1>
+            <div style="text-align: center; margin-bottom: 15px;">
+                <img src="logo.png" alt="School Logo" style="max-height: 55px; width: auto;">
+            </div>
             <h3>Student Balance Lookup</h3>
             <div class="form-group">
                 <label for="lookupLrn">Enter Student LRN</label>
@@ -155,9 +159,12 @@
     <!-- Main Dashboard -->
     <div id="dashboardContainer">
         <div class="header-bar">
-            <div>
-                <h2 id="dashboardSchoolName" style="margin:0;">FIPA Academy Dashboard</h2>
-                <span id="userRoleDisplay" style="color: #666; font-weight: bold;"></span>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <img src="logo.png" alt="School Logo" style="max-height: 45px; width: auto;">
+                <div>
+                    <h2 id="dashboardSchoolName" style="margin:0; font-size: 18px;">FIPA Academy Dashboard</h2>
+                    <span id="userRoleDisplay" style="color: #666; font-weight: bold; font-size: 12px;"></span>
+                </div>
             </div>
             <button class="logout-btn" onclick="logout()">Logout</button>
         </div>
@@ -312,6 +319,7 @@
     <div id="receiptModal">
         <div class="receipt-card">
             <div class="receipt-header">
+                <img src="logo.png" alt="School Logo" style="max-height: 50px; width: auto; margin-bottom: 6px;">
                 <h3 id="receiptSchoolName">FIPA Academy</h3>
                 <p>Official Payment Receipt</p>
             </div>
@@ -358,7 +366,6 @@
                 .then(data => {
                     systemSettings = data;
                     if(data.school_name) {
-                        document.getElementById('schoolTitleDisplay').innerText = data.school_name;
                         document.getElementById('dashboardSchoolName').innerText = data.school_name + ' Dashboard';
                         document.getElementById('settingSchoolName').value = data.school_name;
                     }
@@ -421,7 +428,6 @@
             document.getElementById('lookupLrn').value = '';
             document.getElementById('lookupPin').value = '';
             document.getElementById('portalError').innerText = '';
-            document.getElementById('portalSchoolTitle').innerText = systemSettings.school_name || 'FIPA Academy';
         }
 
         function showLoginScreen() {
@@ -876,3 +882,4 @@
     </script>
 </body>
 </html>
+```[cite: 1]
